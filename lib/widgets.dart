@@ -50,6 +50,7 @@ class Scratcher extends StatefulWidget {
     this.onScratchStart,
     this.onScratchUpdate,
     this.onScratchEnd,
+    this.imageFit = BoxFit.cover,
   }) : super(key: key);
 
   /// Widget rendered under the scratch area.
@@ -72,7 +73,10 @@ class Scratcher extends StatefulWidget {
   final Color color;
 
   /// Image widget used to cover the child widget.
-  final Image? image;
+  final Future<ui.Image>? image;
+
+  /// Image fit
+  final BoxFit imageFit;
 
   /// Determines if the scratcher should rebuild itself when space constraints change (resize).
   final bool rebuildOnResize;
@@ -122,7 +126,7 @@ class ScratcherState extends State<Scratcher> {
       final completer = Completer<ui.Image?>()..complete();
       _imageLoader = completer.future;
     } else {
-      _imageLoader = _loadImage(widget.image!);
+      _imageLoader = widget.image!;
     }
 
     super.initState();
@@ -133,86 +137,63 @@ class ScratcherState extends State<Scratcher> {
     return FutureBuilder<ui.Image?>(
       future: _imageLoader,
       builder: (BuildContext context, AsyncSnapshot<ui.Image?> snapshot) {
-        if (snapshot.connectionState != ConnectionState.waiting) {
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onPanStart: canScratch
-                ? (details) {
-                    widget.onScratchStart?.call();
-                    if (widget.enabled) {
-                      _addPoint(details.localPosition);
-                    }
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanStart: canScratch
+              ? (details) {
+                  widget.onScratchStart?.call();
+                  if (widget.enabled) {
+                    _addPoint(details.localPosition);
                   }
-                : null,
-            onPanUpdate: canScratch
-                ? (details) {
-                    widget.onScratchUpdate?.call();
-                    if (widget.enabled) {
-                      _addPoint(details.localPosition);
-                    }
+                }
+              : null,
+          onPanUpdate: canScratch
+              ? (details) {
+                  widget.onScratchUpdate?.call();
+                  if (widget.enabled) {
+                    _addPoint(details.localPosition);
                   }
-                : null,
-            onPanEnd: canScratch
-                ? (details) {
-                    widget.onScratchEnd?.call();
-                    if (widget.enabled) {
-                      setState(() => points.add(null));
-                    }
+                }
+              : null,
+          onPanEnd: canScratch
+              ? (details) {
+                  widget.onScratchEnd?.call();
+                  if (widget.enabled) {
+                    setState(() => points.add(null));
                   }
-                : null,
-            child: AnimatedSwitcher(
-              duration: transitionDuration ?? Duration.zero,
-              child: isFinished
-                  ? widget.child
-                  : CustomPaint(
-                      foregroundPainter: ScratchPainter(
-                        image: snapshot.data,
-                        imageFit: widget.image == null
-                            ? null
-                            : widget.image!.fit ?? BoxFit.cover,
-                        points: points,
-                        color: widget.color,
-                        onDraw: (size) {
-                          if (_lastKnownSize == null) {
-                            _setCheckpoints(size);
-                          } else if (_lastKnownSize != size &&
-                              widget.rebuildOnResize) {
-                            WidgetsBinding.instance?.addPostFrameCallback((_) {
-                              reset();
-                            });
-                          }
+                }
+              : null,
+          child: AnimatedSwitcher(
+            duration: transitionDuration ?? Duration.zero,
+            child: isFinished
+                ? widget.child
+                : CustomPaint(
+                    foregroundPainter: ScratchPainter(
+                      image: snapshot.data,
+                      imageFit: widget.image == null && snapshot.data != null
+                          ? null
+                          : widget.imageFit,
+                      points: points,
+                      color: widget.color,
+                      onDraw: (size) {
+                        if (_lastKnownSize == null) {
+                          _setCheckpoints(size);
+                        } else if (_lastKnownSize != size &&
+                            widget.rebuildOnResize) {
+                          WidgetsBinding.instance?.addPostFrameCallback((_) {
+                            reset();
+                          });
+                        }
 
-                          _lastKnownSize = size;
-                        },
-                      ),
-                      child: widget.child,
+                        _lastKnownSize = size;
+                      },
                     ),
-            ),
-          );
-        }
-
-        return Container();
+                    child: widget.child,
+                  ),
+          ),
+        );
       },
     );
-  }
-
-  Future<ui.Image> _loadImage(Image image) async {
-    final completer = Completer<ui.Image>();
-    final imageProvider = image.image as dynamic;
-    final key = await imageProvider.obtainKey(const ImageConfiguration());
-
-    imageProvider.load(key, (
-      Uint8List bytes, {
-      int? cacheWidth,
-      int? cacheHeight,
-      bool? allowUpscaling,
-    }) async {
-      return ui.instantiateImageCodec(bytes);
-    }).addListener(ImageStreamListener((ImageInfo image, _) {
-      completer.complete(image.image);
-    }));
-
-    return completer.future;
   }
 
   bool _inCircle(Offset center, Offset point, double radius) {
@@ -347,4 +328,23 @@ class ScratcherState extends State<Scratcher> {
 
     widget.onChange?.call(100);
   }
+}
+
+Future<ui.Image> loadImageFromProvider(ImageProvider imageProvider) async {
+  final completer = Completer<ui.Image>();
+  // final imageProvider = image.image as dynamic;
+  final key = await imageProvider.obtainKey(const ImageConfiguration());
+
+  imageProvider.load(key, (
+    Uint8List bytes, {
+    int? cacheWidth,
+    int? cacheHeight,
+    bool? allowUpscaling,
+  }) async {
+    return ui.instantiateImageCodec(bytes);
+  }).addListener(ImageStreamListener((ImageInfo image, _) {
+    completer.complete(image.image);
+  }));
+
+  return completer.future;
 }
