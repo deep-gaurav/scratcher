@@ -128,73 +128,68 @@ class ScratcherState extends State<Scratcher> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<ui.Image?>(
-      future: _imageLoader,
-      builder: (BuildContext context, AsyncSnapshot<ui.Image?> snapshot) {
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onPanStart: canScratch
-              ? (details) {
-                  widget.onScratchStart?.call();
-                  if (widget.enabled) {
-                    _addPoint(details.localPosition);
-                  }
-                }
-              : null,
-          onPanUpdate: canScratch
-              ? (details) {
-                  widget.onScratchUpdate?.call();
-                  if (widget.enabled) {
-                    _addPoint(details.localPosition);
-                  }
-                }
-              : null,
-          onPanEnd: canScratch
-              ? (details) {
-                  widget.onScratchEnd?.call();
-                  if (widget.enabled) {
-                    setState(() => points.add(null));
-                  }
-                }
-              : null,
-          child: AnimatedSwitcher(
-            duration: transitionDuration ?? Duration.zero,
-            child: isFinished
-                ? widget.child
-                : Stack(
-                    fit: StackFit.passthrough,
-                    children: [
-                      widget.child,
-                      if (widget.coverWidget != null)
-                        Positioned.fill(
-                          child: ClipPath(
-                            clipper: ScratchClipper(
-                              points: points,
-                              onDraw: (size) {
-                                if (_lastKnownSize == null) {
-                                  _setCheckpoints(size);
-                                } else if (_lastKnownSize != size &&
-                                    widget.rebuildOnResize) {
-                                  WidgetsBinding.instance
-                                      ?.addPostFrameCallback((_) {
-                                    reset();
-                                  });
-                                }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: canScratch
+          ? (details) {
+              widget.onScratchStart?.call();
+              if (widget.enabled) {
+                _addPoint(details.localPosition);
+              }
+            }
+          : null,
+      onPanUpdate: canScratch
+          ? (details) {
+              widget.onScratchUpdate?.call();
+              if (widget.enabled) {
+                _addPoint(details.localPosition);
+              }
+            }
+          : null,
+      onPanEnd: canScratch
+          ? (details) {
+              widget.onScratchEnd?.call();
+              if (widget.enabled) {
+                setState(() => points.add(null));
+              }
+            }
+          : null,
+      child: AnimatedSwitcher(
+        duration: transitionDuration ?? Duration.zero,
+        child: isFinished
+            ? widget.child
+            : Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  widget.child,
+                  if (widget.coverWidget != null)
+                    Positioned.fill(
+                      child: ClipPath(
+                        clipper: ScratchClipper(
+                          points: points,
+                          onDraw: (size) {
+                            if (_lastKnownSize == null) {
+                              _setCheckpoints(size);
+                            } else if (_lastKnownSize != size &&
+                                widget.rebuildOnResize) {
+                              WidgetsBinding.instance
+                                  ?.addPostFrameCallback((_) {
+                                reset();
+                              });
+                            }
 
-                                _lastKnownSize = size;
-                              },
+                            _lastKnownSize = size;
+                          },
+                        ),
+                        child: widget.coverWidget ??
+                            Container(
+                              color: widget.color,
                             ),
-                            child: widget.coverWidget ??
-                                Container(
-                                  color: widget.color,
-                                ),
-                          ),
-                        )
-                    ],
-                  ),
-          ),
-        );
-      },
+                      ),
+                    )
+                ],
+              ),
+      ),
     );
   }
 
