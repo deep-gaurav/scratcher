@@ -43,18 +43,20 @@ class Scratcher extends StatefulWidget {
     this.brushSize = 25,
     this.accuracy = ScratchAccuracy.high,
     this.color = Colors.black,
-    this.image,
     this.rebuildOnResize = true,
     this.onChange,
     this.onThreshold,
     this.onScratchStart,
     this.onScratchUpdate,
     this.onScratchEnd,
+    this.coverWidget,
     this.imageFit = BoxFit.cover,
   }) : super(key: key);
 
   /// Widget rendered under the scratch area.
   final Widget child;
+
+  final Widget? coverWidget;
 
   /// Whether new scratches can be applied
   final bool enabled;
@@ -73,7 +75,6 @@ class Scratcher extends StatefulWidget {
   final Color color;
 
   /// Image widget used to cover the child widget.
-  final Future<ui.Image>? image;
 
   /// Image fit
   final BoxFit imageFit;
@@ -122,13 +123,6 @@ class ScratcherState extends State<Scratcher> {
 
   @override
   void initState() {
-    if (widget.image == null) {
-      final completer = Completer<ui.Image?>()..complete();
-      _imageLoader = completer.future;
-    } else {
-      _imageLoader = widget.image!;
-    }
-
     super.initState();
   }
 
@@ -167,28 +161,36 @@ class ScratcherState extends State<Scratcher> {
             duration: transitionDuration ?? Duration.zero,
             child: isFinished
                 ? widget.child
-                : CustomPaint(
-                    foregroundPainter: ScratchPainter(
-                      image: snapshot.data,
-                      imageFit: widget.image == null && snapshot.data != null
-                          ? null
-                          : widget.imageFit,
-                      points: points,
-                      color: widget.color,
-                      onDraw: (size) {
-                        if (_lastKnownSize == null) {
-                          _setCheckpoints(size);
-                        } else if (_lastKnownSize != size &&
-                            widget.rebuildOnResize) {
-                          WidgetsBinding.instance?.addPostFrameCallback((_) {
-                            reset();
-                          });
-                        }
+                : Stack(
+                    fit: StackFit.passthrough,
+                    children: [
+                      widget.child,
+                      if (widget.coverWidget != null)
+                        Positioned.fill(
+                          child: ClipPath(
+                            clipper: ScratchClipper(
+                              points: points,
+                              onDraw: (size) {
+                                if (_lastKnownSize == null) {
+                                  _setCheckpoints(size);
+                                } else if (_lastKnownSize != size &&
+                                    widget.rebuildOnResize) {
+                                  WidgetsBinding.instance
+                                      ?.addPostFrameCallback((_) {
+                                    reset();
+                                  });
+                                }
 
-                        _lastKnownSize = size;
-                      },
-                    ),
-                    child: widget.child,
+                                _lastKnownSize = size;
+                              },
+                            ),
+                            child: widget.coverWidget ??
+                                Container(
+                                  color: widget.color,
+                                ),
+                          ),
+                        )
+                    ],
                   ),
           ),
         );
