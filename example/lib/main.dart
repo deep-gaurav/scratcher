@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:scratcher/scratcher.dart';
 
@@ -30,12 +32,12 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
+  @override
+  void initState() {
+    Timer.periodic(Duration(milliseconds: 200), (_) {
+      setState(() {});
     });
+    super.initState();
   }
 
   @override
@@ -57,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.pink,
                     child: Center(
                       child: Text(
-                        'OVERLAY TEXT',
+                        '${DateTime.now().toUtc()}',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -74,11 +76,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }
