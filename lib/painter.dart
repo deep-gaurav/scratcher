@@ -148,9 +148,9 @@ class ScratchClipper extends CustomClipper<ui.Path> {
           vec = vec.normalized() * point.size;
           var clockvec = vector.Vector2(-vec.y, vec.x);
           var rightclockvec = vector.Vector2(vec.y, -vec.x);
-          var nlP = ui.Offset(position!.dx, position.dy)
+          var nlP = ui.Offset(position.dx, position.dy)
               .translate(rightclockvec.x, rightclockvec.y);
-          var nrP = ui.Offset(position!.dx, position.dy)
+          var nrP = ui.Offset(position.dx, position.dy)
               .translate(clockvec.x, clockvec.y);
           path = Path.combine(
               ui.PathOperation.union,
@@ -158,11 +158,11 @@ class ScratchClipper extends CustomClipper<ui.Path> {
               Path()
                 ..addPolygon([
                   lP ??
-                      ui.Offset(previousPoint!.position!.dx,
+                      ui.Offset(previousPoint.position!.dx,
                               previousPoint.position!.dy)
                           .translate(clockvec.x, clockvec.y),
                   rP ??
-                      ui.Offset(previousPoint!.position!.dx,
+                      ui.Offset(previousPoint.position!.dx,
                               previousPoint.position!.dy)
                           .translate(rightclockvec.x, rightclockvec.y),
                   nlP,
